@@ -27,6 +27,10 @@ const COMPONENT_CSS = `
 .zpq-btn-pause { top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
   width: clamp(36px, 9vmin, 52px); height: clamp(36px, 9vmin, 52px); border-radius: 12px; font-size: clamp(12px, 3.4vmin, 18px); }
 .zpq-btn-pause.zpq-down { transform: translateX(-50%) scale(.94); }
+.zpq-rotate { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + clamp(46px, 12vmin, 64px)); left: 50%; transform: translateX(-50%);
+  display: none; padding: 6px 12px; border-radius: 999px; background: rgba(36,24,48,.7); color: #f4ecdc;
+  font: 600 13px/1.2 system-ui, sans-serif; white-space: nowrap; pointer-events: none; }
+@media (orientation: portrait) and (pointer: coarse) { .zpq-rotate { display: block; } }
 .zpq-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 `;
 
@@ -58,6 +62,13 @@ export function createDisplay(container) {
   canvas.width = VIEW.width;
   canvas.height = VIEW.height;
   root.appendChild(canvas);
+
+  // Phones held upright get a gentle nudge to rotate (the game still works).
+  const rotateHint = document.createElement('div');
+  rotateHint.className = 'zpq-rotate';
+  rotateHint.textContent = '↻ Rotate your phone for a bigger view';
+  rotateHint.setAttribute('aria-hidden', 'true');
+  root.appendChild(rotateHint);
 
   // Screen-reader live region for important moments (photo taken, win...).
   const live = document.createElement('div');

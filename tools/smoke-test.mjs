@@ -95,9 +95,9 @@ await step('jumps and lands again', async () => {
 
 await step('camera follows across the city', async () => {
   for (const [i, x] of [[4, 1180], [5, 2330], [6, 3700]]) {
-    await page.evaluate((x) => {
+    await page.evaluate((targetX) => {
       const { run } = window.__zenyu.game;
-      run.player.reset(x, 40, run.player.hearts);
+      run.player.reset(targetX, 40, run.player.hearts);
       run.camera.snapTo(run.player);
     }, x);
     await page.waitForTimeout(700);
@@ -272,6 +272,48 @@ await step('game over → title via the menu', async () => {
   await page.waitForFunction(() => window.__zenyu.state === 'TITLE', null, { timeout: 3000 });
   await page.waitForTimeout(500);
   await shot('16-title-with-records');
+});
+
+await step('audio unlocked after the first key press', async () => {
+  const audioState = await page.evaluate(() => window.__zenyu.audioState);
+  console.log(`  audio context: ${audioState}`);
+  if (audioState === 'locked') throw new Error('AudioContext was never created');
+});
+
+await step('touch controls work on a phone (landscape + portrait)', async () => {
+  const phone = await browser.newContext({
+    viewport: { width: 844, height: 390 },
+    hasTouch: true,
+    isMobile: true,
+    deviceScaleFactor: 3,
+  });
+  const m = await phone.newPage();
+  m.on('pageerror', (err) => errors.push(`phone pageerror: ${err.message}`));
+  await m.goto(`${BASE_URL}?debug`, { waitUntil: 'load' });
+  await m.waitForFunction(() => window.__zenyu?.state === 'TITLE', null, { timeout: 5000 });
+  await m.waitForTimeout(400);
+  await m.screenshot({ path: new URL('18-phone-title.png', OUT).pathname });
+  await m.tap('canvas');
+  await m.waitForFunction(() => window.__zenyu.state === 'PLAYING', null, { timeout: 3000 });
+  await m.waitForTimeout(500);
+  const display = await m.evaluate(() => getComputedStyle(document.querySelector('.zpq-touch')).display);
+  if (display !== 'block') throw new Error(`touch buttons hidden (${display})`);
+  const x0 = await m.evaluate(() => window.__zenyu.game.run.player.x);
+  const press = (type) =>
+    m.evaluate((t) => {
+      const b = document.querySelector('.zpq-btn-right');
+      b.dispatchEvent(new PointerEvent(t, { pointerId: 7, pointerType: 'touch', bubbles: true, cancelable: true }));
+    }, type);
+  await press('pointerdown');
+  await m.waitForTimeout(600);
+  await m.screenshot({ path: new URL('19-phone-play.png', OUT).pathname });
+  await press('pointerup');
+  const x1 = await m.evaluate(() => window.__zenyu.game.run.player.x);
+  if (x1 - x0 < 20) throw new Error(`▶ moved Zenyu only ${x1 - x0}px`);
+  await m.setViewportSize({ width: 390, height: 844 });
+  await m.waitForTimeout(400);
+  await m.screenshot({ path: new URL('20-phone-portrait.png', OUT).pathname });
+  await phone.close();
 });
 
 await step('embeds inside a small portfolio card and scales crisply', async () => {

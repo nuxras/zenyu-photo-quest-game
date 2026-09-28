@@ -55,6 +55,8 @@ export function createRun(env) {
     outcome: null, // 'won' | 'lost' once the run is over
     outcomeTimer: 0,
     finished: false,
+    cheerTimer: 0.5, // victory hops after the final photo
+    cheerFlip: false,
 
     get frozen() {
       return Boolean(run.photoSeq?.real);
@@ -175,8 +177,12 @@ export function createRun(env) {
 
   function tryStartPhoto() {
     if (player.photoBuffer <= 0 || !player.grounded || player.inPhoto || player.dead) return;
+    if (run.finished) {
+      player.photoBuffer = 0; // the album is full — nothing left to shoot
+      return;
+    }
     const spot = run.activeSpot;
-    const real = Boolean(spot && !spot.taken && !run.finished);
+    const real = Boolean(spot && !spot.taken);
     player.startPhoto();
     run.photoSeq = {
       t: 0,
@@ -240,6 +246,14 @@ export function createRun(env) {
     if (run.outcome) return;
     if (run.finished && run.photos.length === PHOTO.total) {
       run.outcomeTimer -= dt;
+      // Victory hops with a shower of sparkles while the album is prepared.
+      run.cheerTimer -= dt;
+      if (run.cheerTimer <= 0 && !run.photoSeq) {
+        run.cheerTimer = 0.55;
+        player.cheer();
+        particles.sparkle(player.centerX, player.y - 4, 8, run.cheerFlip ? '#FF9AA2' : undefined);
+        run.cheerFlip = !run.cheerFlip;
+      }
       if (run.outcomeTimer <= 0 && !run.popup) run.outcome = 'won';
     } else if (player.dead) {
       if (!run.finished) {

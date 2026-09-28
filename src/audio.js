@@ -210,6 +210,9 @@ export function createAudio() {
     clearInterval(schedulerId);
     schedulerId = setInterval(() => {
       if (!ctx || ctx.state !== 'running') return;
+      // After a throttled background tab, skip missed beats instead of
+      // playing them all at once.
+      if (nextBeatTime < now() - 0.2) nextBeatTime = now() + 0.05;
       while (nextBeatTime < now() + 0.5) {
         scheduleBeat(nextBeatTime, beatIndex);
         nextBeatTime += BEAT;
@@ -222,6 +225,13 @@ export function createAudio() {
     muted = value;
     storage.setMuted(muted);
     if (master) master.gain.setTargetAtTime(muted ? 0 : 0.9, now(), 0.03);
+  }
+
+  /** Silence everything while the tab is hidden; resume when it's back. */
+  function setSuspended(hidden) {
+    if (!ctx) return;
+    if (hidden && ctx.state === 'running') ctx.suspend();
+    if (!hidden && ctx.state === 'suspended') ctx.resume();
   }
 
   /** Lower the music (e.g. while paused) without touching sound effects. */
@@ -238,9 +248,12 @@ export function createAudio() {
     unlock,
     play,
     duck,
+    setSuspended,
     setMuted,
     toggleMute: () => setMuted(!muted),
     isMuted: () => muted,
+    /** 'locked' until the first gesture, then the AudioContext state. */
+    state: () => ctx?.state ?? 'locked',
     destroy,
   };
 }

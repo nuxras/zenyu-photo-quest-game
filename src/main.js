@@ -51,7 +51,7 @@ export function init(container, options = {}) {
     toast: null,
   };
 
-  input.onFirstInteraction(() => audio.unlock());
+  input.onGesture(() => audio.unlock()); // audio may only start after a user gesture
 
   const sound = (name) => audio.play(name);
 
@@ -162,7 +162,7 @@ export function init(container, options = {}) {
         if (action === 'title') transitionTo('TITLE');
       },
       render() {
-        game.renderer.drawRun(ctx, game.run, 1);
+        game.renderer.drawRun(ctx, game.run, 1, true);
         drawPause(ctx, uiEnv());
       },
     },
@@ -188,7 +188,7 @@ export function init(container, options = {}) {
         if (action === 'title') transitionTo('TITLE');
       },
       render() {
-        game.renderer.drawRun(ctx, game.run, 1);
+        game.renderer.drawRun(ctx, game.run, 1, true);
         drawGameOver(ctx, uiEnv());
       },
     },
@@ -285,7 +285,10 @@ export function init(container, options = {}) {
     if (event.relatedTarget && root.contains(event.relatedTarget)) return;
     autoPause();
   };
-  const onVisibility = () => document.hidden && autoPause();
+  const onVisibility = () => {
+    audio.setSuspended(document.hidden);
+    if (document.hidden) autoPause();
+  };
   root.addEventListener('blur', onBlur);
   document.addEventListener('visibilitychange', onVisibility);
 
@@ -334,6 +337,9 @@ export function init(container, options = {}) {
       },
       get spriteMode() {
         return game.sprites?.mode ?? null;
+      },
+      get audioState() {
+        return audio.state();
       },
       game,
       setState,

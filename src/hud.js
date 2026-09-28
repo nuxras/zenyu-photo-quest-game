@@ -84,9 +84,10 @@ export function drawHud(ctx, run) {
     color: run.counterBump > 0 ? ENV.uiAccent : PALETTE.cream,
   });
 
-  // Keyboard pause hint (touch players get a real pause button instead)
+  // Keyboard pause hint (touch players get a real pause button instead).
+  // Clear at first, then it settles into a subtle reminder.
   if (!run.touch) {
-    ctx.globalAlpha = 0.6;
+    ctx.globalAlpha = run.clock < 8 ? 0.85 : Math.max(0.35, 0.85 - (run.clock - 8) * 0.25);
     drawText(ctx, 'P ∥ PAUSE', VIEW.width / 2, 5, { align: 'center', color: PALETTE.cream, outline: 'rgba(24,16,34,0.7)' });
     ctx.globalAlpha = 1;
   }

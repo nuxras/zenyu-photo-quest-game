@@ -225,6 +225,17 @@ export class Player {
     this.emit('respawn');
   }
 
+  /** A little victory hop (used after the final photo). */
+  cheer() {
+    if (!this.grounded || this.inPhoto || this.dead) return;
+    this.vy = -190;
+    this.grounded = false;
+    this.coyote = 0;
+    this.scaleX = 0.85;
+    this.scaleY = 1.15;
+    this.emit('jump');
+  }
+
   startPhoto() {
     this.inPhoto = true;
     this.photoTime = 0;

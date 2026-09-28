@@ -200,9 +200,11 @@ export function createRenderer(sprites) {
     }
   }
 
-  function drawRun(ctx, run, alpha) {
+  /** `still` (paused / game over) skips screen shake so frozen scenes don't jitter. */
+  function drawRun(ctx, run, alpha, still = false) {
     const camX = run.camera.renderX(alpha);
-    const shake = run.camera.shakeOffset(run.reducedMotion ? EFFECTS.reducedMotionShakeScale : 1);
+    const shakeScale = still ? 0 : run.reducedMotion ? EFFECTS.reducedMotionShakeScale : 1;
+    const shake = run.camera.shakeOffset(shakeScale);
     ctx.save();
     ctx.translate(shake.x, shake.y);
     drawWorld(ctx, run, camX, alpha);

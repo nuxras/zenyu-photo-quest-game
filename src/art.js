@@ -288,9 +288,11 @@ export function createArt() {
   const barrelFrames = buildBarrelFrames(6);
   const facades = new Map();
 
+  /** Facades are cached by shape (not object) so new runs reuse them. */
   function facadeFor(b) {
-    let facade = facades.get(b);
-    if (!facade) facades.set(b, (facade = buildFacade(b)));
+    const key = `${b.x}:${b.w}:${b.top}:${b.style}:${b.seed}`;
+    let facade = facades.get(key);
+    if (!facade) facades.set(key, (facade = buildFacade(b)));
     return facade;
   }
 

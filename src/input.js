@@ -38,8 +38,7 @@ export function createInput(root, toGame) {
   const held = new Map(); // action -> Set of sources holding it
   const pressed = new Set(); // actions pressed since the last simulation step
   const taps = []; // pointer taps in game coordinates (menus)
-  const firstInteraction = [];
-  let interacted = false;
+  const gestureListeners = [];
   let touchMode = false; // true while the player is using touch (affects prompts)
 
   function press(action, source) {
@@ -58,11 +57,13 @@ export function createInput(root, toGame) {
     root.querySelectorAll('.zpq-down').forEach((el) => el.classList.remove('zpq-down'));
   }
 
-  /** Browsers only allow audio after a user gesture — let audio.js hook in. */
-  function noteInteraction() {
-    if (interacted) return;
-    interacted = true;
-    firstInteraction.forEach((fn) => fn());
+  /**
+   * Browsers only allow audio after a user gesture, and which events count
+   * differs (iOS wants pointerup/touchend for touch), so audio.js is told
+   * about every gesture; unlocking is idempotent on its side.
+   */
+  function noteGesture() {
+    gestureListeners.forEach((fn) => fn());
   }
 
   // --- Keyboard -------------------------------------------------------------
@@ -70,7 +71,7 @@ export function createInput(root, toGame) {
     const actions = KEY_ACTIONS[event.code];
     if (!actions) return;
     event.preventDefault(); // stop arrows/space from scrolling the page
-    noteInteraction();
+    noteGesture();
     touchMode = false;
     if (event.repeat) return;
     actions.forEach((a) => press(a, event.code));
@@ -90,12 +91,13 @@ export function createInput(root, toGame) {
   function onPointerDown(event) {
     touchMode = event.pointerType === 'touch';
     if (touchMode) root.classList.add('zpq-has-touch');
-    noteInteraction();
+    noteGesture();
     root.focus({ preventScroll: true });
     if (event.target.closest('.zpq-btn')) return;
     taps.push(toGame(event.clientX, event.clientY));
   }
   root.addEventListener('pointerdown', onPointerDown);
+  root.addEventListener('pointerup', noteGesture);
 
   // --- Touch buttons ----------------------------------------------------------
   const layer = document.createElement('div');
@@ -159,13 +161,14 @@ export function createInput(root, toGame) {
       taps.length = 0;
     },
     releaseAll,
-    onFirstInteraction: (fn) => firstInteraction.push(fn),
+    onGesture: (fn) => gestureListeners.push(fn),
     isTouch: () => touchMode,
     destroy() {
       root.removeEventListener('keydown', onKeyDown);
       root.removeEventListener('keyup', onKeyUp);
       root.removeEventListener('blur', releaseAll);
       root.removeEventListener('pointerdown', onPointerDown);
+      root.removeEventListener('pointerup', noteGesture);
       layer.remove();
     },
   };
