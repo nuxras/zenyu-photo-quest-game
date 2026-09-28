@@ -1,0 +1,17 @@
+{
+  "name": "zenyu-photo-quest",
+  "version": "1.0.0",
+  "description": "A tiny pixel-art platformer: help Zenyu snap 10 photos across a city rooftop at golden hour.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "npx --yes http-server -p 8080 -c-1 .",
+    "check:level": "node tools/check-level.mjs",
+    "test:smoke": "node tools/smoke-test.mjs",
+    "test": "node tools/check-level.mjs && node tools/smoke-test.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  },
+  "license": "MIT"
+}

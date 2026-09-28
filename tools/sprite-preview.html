@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Zenyu sprite preview</title>
+    <style>
+      body { margin: 0; padding: 16px; background: #3a2d45; color: #f4ecdc; font: 13px monospace; }
+      canvas { image-rendering: pixelated; display: block; margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <div id="info">Loading…</div>
+    <canvas id="atlas"></canvas>
+    <canvas id="live"></canvas>
+    <script type="module">
+      // Dev tool: shows every frame of Zenyu (sheet or procedural) at 6x,
+      // plus the animations playing at 3x. Serve the repo root and open
+      // /tools/sprite-preview.html  (add ?procedural to ignore zenyu.png).
+      import { loadZenyuSprites, createProceduralSprites } from '../src/sprites.js';
+
+      const forceProcedural = new URLSearchParams(location.search).has('procedural');
+      const sprites = forceProcedural ? createProceduralSprites() : await loadZenyuSprites();
+      const { atlas } = sprites;
+      const names = Object.keys(atlas.animations);
+      document.getElementById('info').textContent =
+        `mode: ${sprites.mode} · animations: ${names.join(', ')}`;
+
+      const S = 6;
+      const big = document.getElementById('atlas');
+      big.width = atlas.image.width * S;
+      big.height = atlas.image.height * S;
+      const bctx = big.getContext('2d');
+      bctx.imageSmoothingEnabled = false;
+      bctx.fillStyle = '#4b3a58';
+      for (let y = 0; y < big.height; y += atlas.frameHeight * S)
+        for (let x = 0; x < big.width; x += atlas.frameWidth * S)
+          if (((x / S / atlas.frameWidth) + (y / S / atlas.frameHeight)) % 2 === 0)
+            bctx.fillRect(x, y, atlas.frameWidth * S, atlas.frameHeight * S);
+      bctx.drawImage(atlas.image, 0, 0, big.width, big.height);
+
+      const live = document.getElementById('live');
+      const L = 3;
+      live.width = names.length * 40 * L;
+      live.height = 44 * L;
+      const lctx = live.getContext('2d');
+      lctx.imageSmoothingEnabled = false;
+      const start = performance.now();
+      function tick(now) {
+        const t = (now - start) / 1000;
+        lctx.setTransform(1, 0, 0, 1, 0, 0);
+        lctx.fillStyle = '#e59a6a';
+        lctx.fillRect(0, 0, live.width, live.height);
+        lctx.setTransform(L, 0, 0, L, 0, 0);
+        names.forEach((name, i) => {
+          const facing = Math.floor(t / 3) % 2 ? -1 : 1;
+          sprites.draw(lctx, name, sprites.frameAt(name, t), i * 40 + 20, 38, facing);
+        });
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+      window.__ready = true;
+    </script>
+  </body>
+</html>
