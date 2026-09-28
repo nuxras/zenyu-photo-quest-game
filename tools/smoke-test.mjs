@@ -58,6 +58,41 @@ await step('sprite mode is reported', async () => {
   console.log(`  sprite mode: ${mode}`);
 });
 
+const player = () => page.evaluate(() => {
+  const p = window.__zenyu.game.run.player;
+  return { x: p.x, y: p.y, grounded: p.grounded, hearts: p.hearts, vx: p.vx };
+});
+
+await step('title → playing on Enter', async () => {
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => window.__zenyu.state === 'PLAYING', null, { timeout: 3000 });
+  await page.waitForTimeout(400);
+});
+
+await step('walks right with the arrow key', async () => {
+  const before = await player();
+  await page.keyboard.down('ArrowRight');
+  await page.waitForTimeout(700);
+  await shot('02-walking');
+  await page.keyboard.up('ArrowRight');
+  const after = await player();
+  if (after.x - before.x < 30) throw new Error(`moved only ${after.x - before.x}px`);
+});
+
+await step('jumps and lands again', async () => {
+  await page.waitForTimeout(300);
+  const before = await player();
+  await page.keyboard.down('Space');
+  await page.waitForTimeout(200);
+  const mid = await player();
+  await shot('03-jumping');
+  await page.keyboard.up('Space');
+  await page.waitForTimeout(900);
+  const after = await player();
+  if (before.y - mid.y < 12) throw new Error(`rose only ${before.y - mid.y}px`);
+  if (!after.grounded) throw new Error('did not land');
+});
+
 await browser.close();
 
 console.log(infos.filter((t) => t.startsWith('[Zenyu]')).join('\n'));

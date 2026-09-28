@@ -5,7 +5,10 @@
 
 import { VIEW, LOOP, PALETTE } from './config.js';
 import { createDisplay } from './display.js';
+import { createInput } from './input.js';
 import { loadZenyuSprites } from './sprites.js';
+import { createRenderer } from './render.js';
+import { createRun } from './play.js';
 import { drawText, BIG } from './font.js';
 
 /**
@@ -20,7 +23,8 @@ export function init(container, options = {}) {
   if (!container) throw new Error('init(container): a container element is required');
   const display = createDisplay(container);
   const { ctx } = display;
-  const game = { time: 0, sprites: null };
+  const input = createInput(display.root, display.toGame);
+  const game = { time: 0, sprites: null, renderer: null, run: null };
 
   // --- State machine --------------------------------------------------------
   const states = {
@@ -28,6 +32,7 @@ export function init(container, options = {}) {
       enter() {
         loadZenyuSprites(options.spriteUrl).then((sprites) => {
           game.sprites = sprites;
+          game.renderer = createRenderer(sprites);
           setState('TITLE');
         });
       },
@@ -38,6 +43,9 @@ export function init(container, options = {}) {
       },
     },
     TITLE: {
+      update() {
+        if (input.anyPressed()) setState('PLAYING');
+      },
       render() {
         ctx.fillStyle = '#E59A6A';
         ctx.fillRect(0, 0, VIEW.width, VIEW.height);
@@ -49,6 +57,18 @@ export function init(container, options = {}) {
         });
         const s = game.sprites;
         s.draw(ctx, 'idle', s.frameAt('idle', game.time), 160, 120, 1);
+        drawText(ctx, 'PRESS START', VIEW.width / 2, 140, { align: 'center', color: PALETTE.charcoal });
+      },
+    },
+    PLAYING: {
+      enter() {
+        game.run = createRun();
+      },
+      update(dt) {
+        game.run.update(dt, input);
+      },
+      render(alpha) {
+        game.renderer.drawRun(ctx, game.run, alpha);
       },
     },
   };
@@ -70,6 +90,7 @@ export function init(container, options = {}) {
   function update(dt) {
     game.time += dt;
     states[current].update?.(dt);
+    input.endStep(); // presses count for exactly one simulation step
   }
 
   function frame(now) {
@@ -89,7 +110,7 @@ export function init(container, options = {}) {
   rafId = requestAnimationFrame(frame);
   if (options.autofocus) display.root.focus({ preventScroll: true });
 
-  // `?debug` exposes a read-only-ish handle for the headless smoke test.
+  // `?debug` exposes a handle for the headless smoke test.
   if (options.debug ?? new URLSearchParams(location.search).has('debug')) {
     window.__zenyu = {
       get state() {
@@ -106,6 +127,7 @@ export function init(container, options = {}) {
   return {
     destroy() {
       cancelAnimationFrame(rafId);
+      input.destroy();
       display.destroy();
     },
   };
