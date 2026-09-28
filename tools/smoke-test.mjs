@@ -112,6 +112,183 @@ await step('camera follows across the city', async () => {
   }
 });
 
+/** Teleport Zenyu onto photo spot `index` (debug helper). */
+async function goToSpot(index, { shield = false } = {}) {
+  await page.evaluate(
+    ([i, shieldOn]) => {
+      const { run } = window.__zenyu.game;
+      const spot = run.spots[i];
+      run.player.reset(spot.x, spot.y, run.player.hearts);
+      if (shieldOn) run.player.invincible = 3; // hazards can't interrupt the test
+      run.camera.snapTo(run.player);
+    },
+    [index, shield],
+  );
+  await page.waitForTimeout(250);
+}
+
+const state = () => page.evaluate(() => window.__zenyu.state);
+
+await step('snaps a photo at a glowing spot', async () => {
+  await goToSpot(0);
+  await shot('07-at-spot');
+  await page.keyboard.press('KeyE');
+  await page.waitForTimeout(110);
+  await shot('08-viewfinder');
+  await page.waitForTimeout(520);
+  await shot('09-polaroid');
+  const n = await page.evaluate(() => window.__zenyu.game.run.photos.length);
+  if (n !== 1) throw new Error(`expected 1 photo, got ${n}`);
+});
+
+await step('pressing E away from a spot does not count', async () => {
+  await page.waitForTimeout(1200);
+  await page.evaluate(() => {
+    const { run } = window.__zenyu.game;
+    run.player.reset(120, 132, run.player.hearts);
+  });
+  await page.waitForTimeout(250);
+  await page.keyboard.press('KeyE');
+  await page.waitForTimeout(500);
+  const n = await page.evaluate(() => window.__zenyu.game.run.photos.length);
+  if (n !== 1) throw new Error(`expected still 1 photo, got ${n}`);
+});
+
+await step('bumping a pigeon costs a heart (knockback + blink)', async () => {
+  await page.evaluate(() => {
+    const { run } = window.__zenyu.game;
+    const pigeon = run.hazards.find((h) => h.kind === 'pigeon');
+    run.player.reset(pigeon.x, pigeon.y, 3);
+    run.camera.snapTo(run.player);
+  });
+  await page.waitForTimeout(120);
+  await shot('10-hurt');
+  const p = await page.evaluate(() => {
+    const pl = window.__zenyu.game.run.player;
+    return { hearts: pl.hearts, invincible: pl.invincible };
+  });
+  if (p.hearts !== 2) throw new Error(`expected 2 hearts, got ${p.hearts}`);
+  if (!(p.invincible > 0)) throw new Error('no invincibility after the hit');
+});
+
+await step('steam vents and barrels are active', async () => {
+  const kinds = await page.evaluate(() => {
+    const { run } = window.__zenyu.game;
+    return {
+      vents: run.hazards.filter((h) => h.kind === 'steam').length,
+      barrels: run.hazards.filter((h) => h.kind === 'barrel').length,
+    };
+  });
+  if (kinds.vents < 4) throw new Error(`expected steam vents, got ${kinds.vents}`);
+  if (kinds.barrels < 1) throw new Error('no barrels have spawned');
+  await page.evaluate(() => {
+    const { run } = window.__zenyu.game;
+    run.player.reset(1700, 140, run.player.hearts);
+    run.player.invincible = 2;
+    run.camera.snapTo(run.player);
+  });
+  await page.waitForTimeout(900);
+  await shot('11-barrels');
+});
+
+await step('falling between roofs costs a heart and respawns safely', async () => {
+  await page.evaluate(() => {
+    const { run } = window.__zenyu.game;
+    run.player.reset(456, 100, 2);
+    run.player.safeSpot = { x: 400, y: 132 - run.player.h };
+  });
+  await page.waitForTimeout(1300);
+  const p = await player();
+  if (p.hearts !== 1) throw new Error(`expected 1 heart, got ${p.hearts}`);
+  if (!p.grounded) throw new Error('not standing after respawn');
+});
+
+await step('P pauses and resumes', async () => {
+  await page.keyboard.press('KeyP');
+  await page.waitForTimeout(150);
+  if ((await state()) !== 'PAUSED') throw new Error(`state is ${await state()}`);
+  await shot('12-paused');
+  await page.keyboard.press('KeyP');
+  await page.waitForTimeout(150);
+  if ((await state()) !== 'PLAYING') throw new Error(`state is ${await state()}`);
+});
+
+await step('M toggles sound and remembers it', async () => {
+  const key = 'zenyu-photo-quest:muted';
+  await page.keyboard.press('KeyM');
+  await page.waitForTimeout(100);
+  const muted = await page.evaluate((k) => localStorage.getItem(k), key);
+  await page.keyboard.press('KeyM');
+  await page.waitForTimeout(100);
+  const unmuted = await page.evaluate((k) => localStorage.getItem(k), key);
+  if (muted !== '1' || unmuted !== '0') throw new Error(`mute flags ${muted} → ${unmuted}`);
+});
+
+await step('all 10 photo spots can be photographed → album', async () => {
+  await page.evaluate(() => {
+    window.__zenyu.game.run.player.hearts = 3;
+  });
+  const count = await page.evaluate(() => window.__zenyu.game.run.spots.length);
+  if (count !== 10) throw new Error(`level has ${count} spots`);
+  for (let i = 0; i < count; i++) {
+    const taken = await page.evaluate((j) => window.__zenyu.game.run.spots[j].taken, i);
+    if (taken) continue;
+    await goToSpot(i, { shield: true });
+    await page.keyboard.press('KeyE');
+    await page.waitForTimeout(i === 4 ? 150 : 850);
+    if (i === 4) {
+      await shot('13-tower-photo');
+      await page.waitForTimeout(700);
+    }
+  }
+  const n = await page.evaluate(() => window.__zenyu.game.run.photos.length);
+  if (n !== 10) throw new Error(`expected 10 photos, got ${n}`);
+  await page.waitForFunction(() => window.__zenyu.state === 'WIN', null, { timeout: 8000 });
+  await page.waitForTimeout(2600);
+  await shot('14-album');
+  const best = await page.evaluate(() => localStorage.getItem('zenyu-photo-quest:best-time'));
+  if (!best) throw new Error('best time was not saved');
+});
+
+await step('play again, then losing every heart shows game over', async () => {
+  await page.keyboard.press('Enter'); // PLAY AGAIN
+  await page.waitForFunction(
+    () => window.__zenyu.state === 'PLAYING' && window.__zenyu.game.run.clock < 1,
+    null,
+    { timeout: 3000 },
+  );
+  await page.evaluate(() => {
+    const { run } = window.__zenyu.game;
+    run.player.reset(456, 100, 1);
+  });
+  await page.waitForFunction(() => window.__zenyu.state === 'GAME_OVER', null, { timeout: 5000 });
+  await page.waitForTimeout(700);
+  await shot('15-game-over');
+});
+
+await step('game over → title via the menu', async () => {
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => window.__zenyu.state === 'TITLE', null, { timeout: 3000 });
+  await page.waitForTimeout(500);
+  await shot('16-title-with-records');
+});
+
+await step('embeds inside a small portfolio card and scales crisply', async () => {
+  const embed = await browser.newPage({ viewport: { width: 800, height: 700 } });
+  embed.on('pageerror', (err) => errors.push(`embed pageerror: ${err.message}`));
+  await embed.goto(`${BASE_URL}examples/embed.html`, { waitUntil: 'load' });
+  await embed.waitForTimeout(800);
+  const size = await embed.evaluate(() => {
+    const c = document.querySelector('#zenyu-game canvas');
+    return { w: c.clientWidth, h: c.clientHeight, dpr: devicePixelRatio };
+  });
+  const scale = (size.w * size.dpr) / 320;
+  if (!Number.isInteger(scale)) throw new Error(`non-integer scale ${scale}`);
+  await embed.screenshot({ path: new URL('17-embed.png', OUT).pathname });
+  await embed.close();
+});
+
 await browser.close();
 
 console.log(infos.filter((t) => t.startsWith('[Zenyu]')).join('\n'));

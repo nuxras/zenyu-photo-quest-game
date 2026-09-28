@@ -14,7 +14,7 @@ const COMPONENT_CSS = `
 .zpq-root:focus-visible { box-shadow: inset 0 0 0 2px #ffd27e; }
 .zpq-canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
 .zpq-touch { position: absolute; inset: 0; pointer-events: none; display: none; }
-.zpq-root.zpq-has-touch .zpq-touch { display: block; }
+.zpq-root.zpq-has-touch.zpq-playing .zpq-touch { display: block; }
 .zpq-btn { position: absolute; pointer-events: auto; border: 2px solid rgba(244,236,220,.55); border-radius: 50%;
   background: rgba(36,24,48,.42); color: #f4ecdc; font: 700 clamp(14px, 4.2vmin, 26px)/1 monospace;
   width: clamp(48px, 13vmin, 84px); height: clamp(48px, 13vmin, 84px); display: flex; align-items: center;

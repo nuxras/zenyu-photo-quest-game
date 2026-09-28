@@ -131,6 +131,8 @@ export function createInput(root, toGame) {
       button.addEventListener(type, (e) => up(e.pointerId));
     }
     button.addEventListener('contextmenu', (e) => e.preventDefault());
+    // Never let a button take focus away from the game root (that would pause).
+    button.addEventListener('mousedown', (e) => e.preventDefault());
     layer.appendChild(button);
   }
   root.appendChild(layer);

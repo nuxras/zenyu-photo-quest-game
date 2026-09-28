@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Embed example · Zenyu's Photo Quest</title>
+    <style>
+      body { margin: 0; padding: 32px 16px; background: #f4ecdc; color: #2b2b2b; font: 16px/1.5 system-ui, sans-serif; }
+      .card { max-width: 720px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 20px;
+        box-shadow: 0 8px 30px rgba(47, 79, 69, 0.15); }
+      .card h2 { margin: 0 0 4px; color: #2f4f45; }
+      .card p { margin: 0 0 16px; color: #6b7a62; }
+      /* The game fills whatever box you give it — here a 16:9 frame. */
+      .game { aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; }
+    </style>
+  </head>
+  <body>
+    <article class="card">
+      <h2>Zenyu's Photo Quest</h2>
+      <p>A tiny pixel-art platformer. Click the game to focus it, then use the arrow keys.</p>
+      <div id="zenyu-game" class="game"></div>
+    </article>
+    <script type="module">
+      // Embedding in a portfolio is one call: init(anyElementWithASize).
+      import { init } from '../src/main.js';
+
+      const game = init(document.getElementById('zenyu-game'));
+      // Later, e.g. when navigating away in a SPA: game.destroy();
+      window.__embeddedGame = game;
+    </script>
+  </body>
+</html>
