@@ -181,7 +181,9 @@ export function drawTitle(ctx, env) {
 
   // Blinking prompt
   if (Math.floor(time * (env.reducedMotion ? 1 : 2)) % 2 === 0) {
-    drawText(ctx, touch ? 'TAP TO START' : 'PRESS ENTER OR SPACE', W / 2, 140, {
+    // An embedded game has no keyboard focus until it's clicked, so say so.
+    const prompt = touch ? 'TAP TO START' : env.focused ? 'PRESS ENTER OR SPACE' : 'CLICK TO START';
+    drawText(ctx, prompt, W / 2, 140, {
       align: 'center',
       color: ENV.uiAccent,
       outline: INK_OUTLINE,
