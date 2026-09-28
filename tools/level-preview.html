@@ -20,13 +20,22 @@
       import { createProceduralSprites } from '../src/sprites.js';
       import { Player } from '../src/player.js';
       import { drawText } from '../src/font.js';
+      import { Particles, FloatingTexts } from '../src/entities.js';
 
       const params = new URLSearchParams(location.search);
       const scale = Number(params.get('scale') || 1);
       const level = createLevel();
       const renderer = createRenderer(createProceduralSprites());
       const player = new Player(-100, 0);
-      const run = { level, player, time: 3.2, reducedMotion: true, hazards: [], particles: null };
+      const run = {
+        level,
+        player,
+        time: 3.2,
+        reducedMotion: true,
+        spots: level.spots.map((s) => ({ ...s, taken: false })),
+        particles: new Particles(),
+        texts: new FloatingTexts(),
+      };
 
       const strip = document.getElementById('strip');
       strip.width = level.width * scale;
