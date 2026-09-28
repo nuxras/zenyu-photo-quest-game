@@ -214,5 +214,5 @@ export function createRenderer(sprites) {
     drawHud(ctx, run);
   }
 
-  return { drawRun, drawWorld, drawPlayer, background, art };
+  return { drawRun, drawWorld, background, art };
 }

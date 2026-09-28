@@ -59,9 +59,3 @@ export function moveY(body, dy, solids) {
   }
   return result;
 }
-
-/** Does anything solid sit directly under `body` (within 1px)? */
-export function isOnGround(body, solids) {
-  const probe = { x: body.x, y: body.y + body.h, w: body.w, h: 1 };
-  return solids.some((s) => overlaps(probe, s) && Math.abs(s.y - (body.y + body.h)) < 1);
-}

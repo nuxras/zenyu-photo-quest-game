@@ -316,6 +316,33 @@ await step('touch controls work on a phone (landscape + portrait)', async () => 
   await phone.close();
 });
 
+await step('prefers-reduced-motion: softer flash, no errors', async () => {
+  const calm = await browser.newContext({ viewport: { width: 960, height: 540 }, reducedMotion: 'reduce' });
+  const r = await calm.newPage();
+  r.on('pageerror', (err) => errors.push(`reduced-motion pageerror: ${err.message}`));
+  await r.goto(`${BASE_URL}?debug`, { waitUntil: 'load' });
+  await r.waitForFunction(() => window.__zenyu?.state === 'TITLE', null, { timeout: 5000 });
+  await r.keyboard.press('Enter');
+  await r.waitForFunction(() => window.__zenyu.state === 'PLAYING', null, { timeout: 3000 });
+  const reduced = await r.evaluate(() => window.__zenyu.game.run.reducedMotion);
+  if (!reduced) throw new Error('run did not pick up prefers-reduced-motion');
+  // Input is ignored while the transition opens; wait for the run to start.
+  await r.waitForFunction(() => window.__zenyu.game.run.clock > 0.2, null, { timeout: 3000 });
+  await r.evaluate(() => {
+    const { run } = window.__zenyu.game;
+    run.player.reset(run.spots[1].x, run.spots[1].y, 3);
+    run.camera.snapTo(run.player);
+  });
+  await r.waitForTimeout(250);
+  await r.keyboard.press('KeyE');
+  await r.waitForTimeout(200);
+  await r.screenshot({ path: new URL('21-reduced-motion-flash.png', OUT).pathname });
+  await r.waitForTimeout(400);
+  const photos = await r.evaluate(() => window.__zenyu.game.run.photos.length);
+  if (photos !== 1) throw new Error(`expected a photo, got ${photos}`);
+  await calm.close();
+});
+
 await step('embeds inside a small portfolio card and scales crisply', async () => {
   const embed = await browser.newPage({ viewport: { width: 800, height: 700 } });
   embed.on('pageerror', (err) => errors.push(`embed pageerror: ${err.message}`));

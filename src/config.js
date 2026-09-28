@@ -50,7 +50,6 @@ export const ENV = {
   ],
   sun: '#FFE3A3',
   sunCore: '#FFF3D2',
-  sunGlow: 'rgba(255, 214, 140, 0.18)',
   star: '#FFF1D8',
   cloudLight: '#F9C08E',
   cloudMid: '#D98A7F',
@@ -61,15 +60,8 @@ export const ENV = {
   midCityWindow: '#F0B870',
   nearCity: '#3D2A45',
   nearCityWindow: '#FFCB7A',
-  alley: '#1E1628', // the street far below the rooftops
-  alleyGlow: '#4A2E3E',
-  // Foreground rooftops
-  wall: '#46324A',
-  wallDark: '#34253A',
-  wallLight: '#5A4058',
-  brickLine: '#3C2B41',
+  // Foreground rooftops (per-building wall colours live in art.js)
   rim: '#F2A56B', // sunlit rim on the side facing the sun
-  roof: '#6A4B5E',
   roofTop: '#E7A077',
   roofShadow: '#2A1E30',
   windowLit: '#FFD27E',
@@ -82,17 +74,12 @@ export const ENV = {
   wood: '#9C6A4B',
   woodDark: '#6B4535',
   woodLight: '#C8905F',
-  lampGlow: 'rgba(255, 210, 130, 0.22)',
   neonPink: '#FF7AA8',
   neonTeal: '#7FF0E0',
   neonOff: '#6B4A62',
   steam: '#EDE6F0',
   spotGlow: '#FFE7A0',
-  spotGlowDim: 'rgba(255, 231, 160, 0.35)',
-  uiInk: '#2B2B2B',
   uiPaper: '#F4ECDC',
-  uiShadow: 'rgba(20, 12, 28, 0.55)',
-  uiDim: 'rgba(24, 16, 34, 0.72)',
   uiAccent: '#FFD27E',
 };
 
@@ -179,7 +166,6 @@ export const PHOTO = {
 export const EFFECTS = {
   damageShake: 3.5, // px amplitude
   damageShakeTime: 0.3,
-  landShake: 0,
   reducedMotionShakeScale: 0.15,
   reducedMotionFlashAlpha: 0.3,
   transitionTime: 0.35,

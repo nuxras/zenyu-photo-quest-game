@@ -120,5 +120,5 @@ export function createDisplay(container) {
     root.remove();
   }
 
-  return { root, canvas, ctx, toGame, announce, destroy, resize };
+  return { root, canvas, ctx, toGame, announce, destroy };
 }
