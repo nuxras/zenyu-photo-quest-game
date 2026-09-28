@@ -4,11 +4,11 @@ A tiny pixel-art platformer set on a city's rooftops at golden hour. Help **Zeny
 
 Every photo is real: when you press the shutter, the game re-renders the scene off-screen, frames the subject, and develops it into a little polaroid for your album.
 
-![Title screen](docs/title.png)
+![Title screen](docs/screenshots/title.png)
 
 | Crossing the old bridge | Snap! | The finished album |
 | --- | --- | --- |
-| ![Gameplay on the bridge](docs/bridge.png) | ![A fresh polaroid](docs/photo.png) | ![Photo album](docs/album.png) |
+| ![Gameplay on the bridge](docs/screenshots/bridge.png) | ![A fresh polaroid](docs/screenshots/photo.png) | ![Photo album](docs/screenshots/album.png) |
 
 Built with **vanilla JavaScript (ES modules) + HTML5 Canvas**: no frameworks, no build step, no runtime dependencies, no image or audio files.
 
@@ -71,7 +71,7 @@ On load, the console tells you which mode is active:
 [Zenyu] No assets/zenyu.png found (that is fine!) — drawing Zenyu procedurally from pixel grids.
 ```
 
-If the file is missing, broken or too small for the configured layout, the game quietly falls back to the procedural Zenyu and never crashes. Probing for a missing file does log one browser `404` network line; that is expected. See [`assets/README.md`](assets/README.md) for details. `zenyu char.png` in the repo root is the original character reference sheet the pixel art was drawn from. It is not a sprite sheet.
+If the file is missing, broken or too small for the configured layout, the game quietly falls back to the procedural Zenyu and never crashes. Probing for a missing file does log one browser `404` network line; that is expected. See [`assets/README.md`](assets/README.md) for details. [`docs/reference/zenyu-character-sheet.png`](docs/reference/zenyu-character-sheet.png) is the original character reference sheet the pixel art is drawn from. It is not a sprite sheet.
 
 ---
 
@@ -181,4 +181,4 @@ examples/embed.html   embedding example
 
 ---
 
-Character design: Zenyu (reference sheet in `zenyu char.png`). Code, pixel art, fonts and sounds are all generated in this repo.
+Character design: Zenyu ([reference sheet](docs/reference/zenyu-character-sheet.png)). Code, pixel art, fonts and sounds are all generated in this repo.
