@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Zenyu's Photo Quest</title>
+    <meta
+      name="description"
+      content="A tiny pixel-art platformer: help Zenyu snap 10 photos across a city rooftop at golden hour."
+    />
+    <meta name="theme-color" content="#140e1c" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8' shape-rendering='crispEdges'%3E%3Crect x='2' y='1' width='2' height='1' fill='%232B2B2B'/%3E%3Crect x='0' y='2' width='8' height='5' fill='%232B2B2B'/%3E%3Crect x='3' y='3' width='2' height='3' fill='%23B5AC9F'/%3E%3Crect x='6' y='3' width='1' height='1' fill='%23FFD27E'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <h1 class="visually-hidden">Zenyu's Photo Quest</h1>
+      <div id="game" class="game-frame"></div>
+      <noscript>
+        <p class="noscript">Zenyu's Photo Quest needs JavaScript to run. 📷</p>
+      </noscript>
+    </main>
+    <script type="module">
+      import { init } from './src/main.js';
+
+      init(document.getElementById('game'), { autofocus: true });
+    </script>
+  </body>
+</html>

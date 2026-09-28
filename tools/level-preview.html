@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Zenyu level preview</title>
+    <style>
+      body { margin: 0; background: #140e1c; color: #f4ecdc; font: 12px monospace; }
+      canvas { image-rendering: pixelated; display: block; }
+    </style>
+  </head>
+  <body>
+    <canvas id="strip"></canvas>
+    <script type="module">
+      // Dev tool: renders the whole level as one long strip (screen by screen)
+      // with solids outlined, so layouts can be reviewed at a glance.
+      // Options: ?scale=2  ?boxes (outline collision boxes and spots)
+      import { VIEW } from '../src/config.js';
+      import { createLevel } from '../src/level.js';
+      import { createRenderer } from '../src/render.js';
+      import { createProceduralSprites } from '../src/sprites.js';
+      import { Player } from '../src/player.js';
+      import { drawText } from '../src/font.js';
+      import { Particles, FloatingTexts } from '../src/entities.js';
+
+      const params = new URLSearchParams(location.search);
+      const scale = Number(params.get('scale') || 1);
+      const level = createLevel();
+      const renderer = createRenderer(createProceduralSprites());
+      const player = new Player(-100, 0);
+      const run = {
+        level,
+        player,
+        time: 3.2,
+        reducedMotion: true,
+        spots: level.spots.map((s) => ({ ...s, taken: false })),
+        particles: new Particles(),
+        texts: new FloatingTexts(),
+      };
+
+      const strip = document.getElementById('strip');
+      strip.width = level.width * scale;
+      strip.height = VIEW.height * scale;
+      const sctx = strip.getContext('2d');
+      sctx.imageSmoothingEnabled = false;
+      const screen = document.createElement('canvas');
+      screen.width = VIEW.width;
+      screen.height = VIEW.height;
+      const ctx = screen.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+
+      for (let camX = 0; camX < level.width; camX += VIEW.width) {
+        renderer.drawWorld(ctx, run, camX, 1, { forPhoto: true });
+        if (params.has('boxes')) {
+          ctx.strokeStyle = 'rgba(120,255,160,.8)';
+          for (const s of level.solids) ctx.strokeRect(s.x - camX + 0.5, s.y + 0.5, s.w - 1, Math.min(s.h, 200) - 1);
+          for (const spot of level.spots) {
+            ctx.fillStyle = '#ffe7a0';
+            ctx.fillRect(spot.x - camX - 1, spot.y - 30, 2, 30);
+            drawText(ctx, `${spot.id + 1}`, spot.x - camX, spot.y - 38, { align: 'center', outline: '#000' });
+          }
+          for (const h of level.hazards) {
+            ctx.fillStyle = '#ff5a5a';
+            ctx.fillRect((h.x ?? h.x1) - camX, h.y - 4, (h.x2 ?? h.x + 4) - (h.x ?? h.x1), 4);
+          }
+          drawText(ctx, `x=${camX}`, 2, 172, { outline: '#000' });
+        }
+        sctx.drawImage(screen, camX * scale, 0, VIEW.width * scale, VIEW.height * scale);
+      }
+      window.__ready = true;
+    </script>
+  </body>
+</html>
