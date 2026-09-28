@@ -202,7 +202,7 @@ export function createRun(env) {
     if (!seq.fired && seq.t >= PHOTO.shutterAt) {
       seq.fired = true;
       if (seq.real) takePhoto(seq.spot);
-      else texts.add(seq.spot ? 'ALREADY SNAPPED!' : 'NO SHOT HERE...', player.centerX, player.y - 16);
+      else texts.add(seq.spot ? 'ALREADY SNAPPED!' : 'NO SHOT HERE...', player.centerX, player.y - 20);
     }
     if (seq.t >= seq.duration) {
       player.endPhoto();

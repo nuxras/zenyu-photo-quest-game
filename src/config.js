@@ -27,13 +27,17 @@ export const PALETTE = {
  */
 export const PALETTE_EXTRA = {
   deepGreenDark: '#223A33', // knit ribs / shadow side of the jacket
-  charcoalLight: '#46464A', // backpack highlight
+  charcoalLight: '#46464A', // camera and strap-toggle highlight
   camoDark: '#4F5C49', // camo blotches
+  camoLight: '#8A9982', // light camo blotches
   skin: '#F1DCCB',
-  skinShade: '#D8B9A6',
-  mouthPink: '#D9837A', // inside of the shark mouth
-  white: '#F7F4EC', // teeth, eye glint, lens glint
-  lens: '#56656B',
+  skinShade: '#C9A493', // mouth
+  blush: '#E6ADA0',
+  hairShade: '#CFC6BB', // shadows in the white hair
+  mouthPink: '#D9837A', // the shark print's tongue
+  white: '#F7F4EC', // hair, teeth
+  lens: '#6A7479', // lower iris, camera glass
+  lensGold: '#D9A441', // the camera's gold lens ring
 };
 
 /** Environment colours for the golden-hour → dusk city. */
@@ -102,8 +106,8 @@ export const PHYSICS = {
 
 /** Zenyu's body and movement. */
 export const PLAYER = {
-  width: 10, // hitbox — narrower than the sprite so near misses feel fair
-  height: 22,
+  width: 12, // hitbox — narrower than the sprite (beanie + flaps) so near misses feel fair
+  height: 28,
   maxSpeed: 88,
   groundAccel: 850,
   groundDecel: 1100,
@@ -184,10 +188,10 @@ export const FLOW = {
  */
 export const SPRITE_SHEET = {
   src: '../assets/zenyu.png', // resolved relative to this module
-  frameWidth: 24,
-  frameHeight: 32,
-  anchorX: 12,
-  anchorY: 32,
+  frameWidth: 32,
+  frameHeight: 42,
+  anchorX: 16,
+  anchorY: 42,
   animations: {
     idle: { row: 0, frames: 2, fps: 2 },
     walk: { row: 1, frames: 4, fps: 10 },

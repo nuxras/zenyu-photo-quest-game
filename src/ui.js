@@ -165,11 +165,11 @@ export function drawTitle(ctx, env) {
   if (cycle > 3.8 && cycle < 4.05 && !env.reducedMotion) {
     // a little camera flash sparkle
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(172, 107, 1, 1);
-    ctx.fillRect(170, 107, 5, 1);
-    ctx.fillRect(172, 105, 1, 5);
+    ctx.fillRect(164, 107, 1, 1);
+    ctx.fillRect(162, 107, 5, 1);
+    ctx.fillRect(164, 105, 1, 5);
     ctx.globalAlpha = 0.25;
-    ctx.fillRect(166, 101, 13, 13);
+    ctx.fillRect(158, 101, 13, 13);
     ctx.globalAlpha = 1;
   }
 

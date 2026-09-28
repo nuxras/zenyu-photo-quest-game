@@ -60,7 +60,7 @@ npm run test:smoke      # …in another: headless Chromium plays through the gam
 
 Zenyu is drawn **procedurally** from pixel grids in `src/sprites.js` by default. To use your own art, drop a sprite sheet at **`assets/zenyu.png`**:
 
-- 24×32 frames facing **right**, one animation per row: `idle` (2 frames), `walk` (4), `jump` (1), `photo` (2).
+- 32×42 frames facing **right**, one animation per row: `idle` (2 frames), `walk` (4), `jump` (1), `photo` (2).
 - The layout (frame size, rows, frame counts, fps and foot anchor) lives in `SPRITE_SHEET` in **`src/config.js`**. Change it to match your sheet.
 - Optional rows such as `fall` and `hurt` can be added there. Missing ones fall back to `jump` and `idle`.
 

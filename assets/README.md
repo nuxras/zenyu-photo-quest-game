@@ -16,9 +16,9 @@ The layout lives in `SPRITE_SHEET` in `src/config.js` — edit it to match your 
 | 2   | `jump`    | 1      | also used for falling        |
 | 3   | `photo`   | 2      | raise camera → at the eye    |
 
-- Frames are `24×32` px, laid out left→right, one animation per row.
+- Frames are `32×42` px, laid out left→right, one animation per row.
 - Draw every frame **facing right**; the game mirrors it for walking left.
-- `anchorX/anchorY` (default `12, 32`) is the point that sits on Zenyu's feet.
+- `anchorX/anchorY` (default `16, 42`) is the point that sits on Zenyu's feet.
 - Optional extra rows: add `fall` or `hurt` entries to `SPRITE_SHEET.animations`.
 - Keep the background transparent and use nearest-neighbour exports (no smoothing).
 
