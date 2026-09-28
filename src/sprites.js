@@ -2,6 +2,12 @@
 // sprites.js — Zenyu's sprite: loads assets/zenyu.png if present, otherwise
 // builds a procedural atlas from pixel grids. Both modes produce the same
 // "atlas" shape so the renderer never needs to know which one is active.
+//
+// The procedural Zenyu follows the character reference sheet
+// (docs/reference/zenyu-character-sheet.png): a bell-shaped green beanie with
+// cream bear ears, a bobble and two cream stripes, long ear-flaps, messy
+// white hair, calm dark eyes, the shark-mouth jacket with big cream sleeves,
+// baggy camo pants, chunky sneakers and a black camera with a gold lens.
 // ---------------------------------------------------------------------------
 
 import { PALETTE, PALETTE_EXTRA, SPRITE_SHEET } from './config.js';
@@ -9,244 +15,357 @@ import { makeCanvas, pixelContext, paintGrid, mirrorCanvas } from './pixelgrid.j
 
 /** Palette keys used in Zenyu's pixel grids. */
 const ZENYU_COLORS = {
-  K: PALETTE.charcoal, // outline, eyes, camera, backpack
-  B: PALETTE.charcoal, // backpack body
-  b: PALETTE_EXTRA.charcoalLight, // backpack highlight
-  G: PALETTE.deepGreen,
-  D: PALETTE_EXTRA.deepGreenDark,
-  g: PALETTE.sage,
-  C: PALETTE.cream,
-  x: PALETTE.warmGrey,
+  K: PALETTE.charcoal, // outline, eyes, camera body
+  B: PALETTE.charcoal, // backpack straps
+  k: PALETTE_EXTRA.charcoalLight, // camera / strap-toggle highlight
+  G: PALETTE.deepGreen, // beanie, flaps, jacket
+  D: PALETTE_EXTRA.deepGreenDark, // knit ribs, shadow side
+  g: PALETTE.sage, // upper sleeves, beanie sheen
+  C: PALETTE.cream, // beanie stripes + ears, sleeves, shark belly, sneakers
+  x: PALETTE.warmGrey, // cream shading, knit ribbing, soles
   H: PALETTE_EXTRA.white, // hair
-  h: PALETTE.cream, // hair shadow
+  h: PALETTE_EXTRA.hairShade,
   s: PALETTE_EXTRA.skin,
-  S: PALETTE_EXTRA.skinShade,
+  S: PALETTE_EXTRA.skinShade, // mouth
+  b: PALETTE_EXTRA.blush,
+  L: PALETTE_EXTRA.lens, // lower iris, lens glass
   R: PALETTE.sharkRed,
-  p: PALETTE_EXTRA.mouthPink,
-  W: PALETTE_EXTRA.white,
+  p: PALETTE_EXTRA.mouthPink, // shark tongue
+  W: PALETTE_EXTRA.white, // shark teeth
   M: PALETTE.camo,
   m: PALETTE_EXTRA.camoDark,
-  L: PALETTE_EXTRA.lens,
+  n: PALETTE_EXTRA.camoLight,
+  Y: PALETTE_EXTRA.lensGold, // the camera's gold lens ring
 };
 
-const FRAME_W = 24;
-const FRAME_H = 32;
+const FRAME_W = 32;
+const FRAME_H = 42;
 
 // --- Parts -----------------------------------------------------------------
-// Every part is authored in full-frame coordinates (24 columns wide) so parts
-// line up without offset bookkeeping. Rows start at the `y` given with them.
+// Every part is authored in full-frame columns (32 wide) so parts line up
+// without offset bookkeeping. Heads start at frame row 0, torsos at row 22,
+// legs at row 35. Each part carries its own 1px outline.
 
-/** Head with ear-flaps hanging down (rows 0–20). */
-const HEAD_DOWN = [
-  '........................', // 0
-  '........................', // 1
-  '......KK........KK......', // 2  ears
-  '.....KCCKKKKKKKKCCK.....', // 3
-  '....KCxKGGDGGDGGKxCK....', // 4
-  '....KKGDGGDGGDGgDGKK....', // 5  knit ribs + sunlit highlight
-  '....KGGDGGDGGDGgDgGK....', // 6
-  '....KGGDGGDGGDGGDgGK....', // 7
-  '....KGGDGGDGGDGGDGGK....', // 8
-  '....KCCCCCCCCCCCCCCK....', // 9  cream stripe
-  '....KxCCCCCCCCCCCCxK....', // 10
-  '...KDGGGGGGGGGGGGGGDK...', // 11 brim
-  '...KDHHHhHHHHhHHHHHDK...', // 12 messy fringe
-  '...KDHhHHHhHHHHhHHhDK...', // 13
-  '...KDhHsHKKsHsKKsHhDK...', // 14 eyes (face rows are swappable)
-  '...KDGhssKLsssKLssKDK...', // 15
-  '...KDGKSssssssSssSKDK...', // 16
-  '...KDGKKSssssssssKKDK...', // 17
-  '...KDGGKKKKKKKKKKKGDK...', // 18 jaw
-  '...KDGK..........KGDK...', // 19 flap tips
-  '....KK............KK....', // 20
-];
-
-/** Head with ear-flaps fluttering up and out (used while falling / hurt). */
-const HEAD_UP = [
-  ...HEAD_DOWN.slice(0, 11),
-  '..KKDGGGGGGGGGGGGGGDKK..', // 11
-  '.KDGKHHHhHHHHhHHHHHKGDK.', // 12
-  'KDGKKHhHHHhHHHHhHHhKKGDK', // 13
-  'KKK.KhHsHKKsHsKKsHhK.KKK', // 14
-  '.....KhssKLsssKLssK.....', // 15
-  '......KSssssssSssSK.....', // 16
-  '.......KSssssssssK......', // 17
-  '.......KKKKKKKKKKK......', // 18
-  '........................', // 19
-  '........................', // 20
-];
-
-/** Face overrides for rows 14–15, columns 6–17 (12 px). */
-const FACES = {
-  normal: null,
-  blink: ['HsHsssHssssH', 'hssKKsssKKss'],
-  wink: ['HsHsssHsKKsH', 'hssKKsssKLss'], // left eye squeezed shut behind the camera
-  hurt: ['HsHKssHssKsH', 'hsssKsssKsss'],
+/** Heads (frame rows 0-22). */
+const HEADS = {
+  // Ear-flaps hanging down, calm face (idle, walk, jump).
+  down: [
+    '......KCCK.KKKGGGGKKKKCCKK......', // bobble
+    '.....KCCCCKGGGGGGGGGGKCCCCK.....', // bear ears + bell-shaped knit dome
+    '.....KCxxCGGGGGGGGGgGGCxxCK.....',
+    '......KKDDDGGDGGDGGDgGDGKK......',
+    '......KDDGDGGDGGDGGDGgDGGK......',
+    '.....KDDGGDGGDGGDGGDGGDGGDK.....',
+    '.....KDDGGDGGDGGDGGDGGDGGDK.....',
+    '.....KDDGGDGGDGGDGGDGGDGGDK.....',
+    '....KCCCCCCCCCCCCCCCCCCCCCCK....', // wide cream stripe
+    '....KCxCCxCCxCCxCCxCCxCCxCCK....',
+    '....KGGGGGGGGGGGGGGGGGGGGGGK....', // green line
+    '...KDGGCCxCCxCCxCCxCCxCCxGGDK...', // thin cream stripe
+    '...KDGGDDDDDDDDDDDDDDDDDDGGDK...', // brim
+    '..KDGGGKhHHHHHHHHHHHHHHhKGGGDK..', // jagged white fringe
+    '..KDGGKKhHHHHHHHHHHHHHHhKKGGDK..',
+    '..KDGGKHhHhshHhHHshshHHhHKGGDK..',
+    '.KDGGGKHHHsKKKsHhsKKKhHhHHGGGDK.', // eyes
+    '.KDGGKKhHhsKKKshssKKKshhHhKGGDK.',
+    '.KDGGKKHhssLLLssssLLLsshHKKGGDK.',
+    '.KDGGKKhKsbssssssssssbsKhKKGGDK.', // blush
+    '.KDGGK.K.KsssssSSsssssK.K.KGGDK.', // mouth
+    '..KDGK....KKssssssssKK....KGDK..',
+    '...KK.......KKKKKKKK.......KK...',
+  ],
+  // Ear-flaps fluttering up and out (falling).
+  up: [
+    '......KCCK.KKKGGGGKKKKCCKK......',
+    '.....KCCCCKGGGGGGGGGGKCCCCK.....',
+    '.....KCxxCGGGGGGGGGgGGCxxCK.....',
+    '......KKDDDGGDGGDGGDgGDGKK......',
+    '......KDDGDGGDGGDGGDGgDGGK......',
+    '.....KDDGGDGGDGGDGGDGGDGGDK.....',
+    '.....KDDGGDGGDGGDGGDGGDGGDK.....',
+    '.....KDDGGDGGDGGDGGDGGDGGDK.....',
+    '....KCCCCCCCCCCCCCCCCCCCCCCK....',
+    '..KKKCxCCxCCxCCxCCxCCxCCxCCKKK..',
+    '.KGGGGGGGGGGGGGGGGGGGGGGGGGGGGK.',
+    'KGGGGGxCCxCCxCCxCCxCCxCCxCGGGGGK',
+    'GGGDDKDDDDDDDDDDDDDDDDDDDDKDDGGG',
+    'GDDKK.KKhHHHHHHHHHHHHHHhKK.KKDDG',
+    'KKK....KhHHHHHHHHHHHHHHhK....KKK',
+    '......KHhHhshHhHHshshHHhHK......',
+    '......KHHHsKKKsHhsKKKhHhHHK.....',
+    '......KhHhsKKKshssKKKshhHhK.....',
+    '......KHhssLLLssssLLLsshHK......',
+    '......KhKsbssssssssssbsKhK......',
+    '.......K.KsssssSSsssssK.K.......',
+    '..........KKssssssssKK..........',
+    '............KKKKKKKK............',
+  ],
+  // Eyes closed for a blink.
+  blink: [
+    '......KCCK.KKKGGGGKKKKCCKK......',
+    '.....KCCCCKGGGGGGGGGGKCCCCK.....',
+    '.....KCxxCGGGGGGGGGgGGCxxCK.....',
+    '......KKDDDGGDGGDGGDgGDGKK......',
+    '......KDDGDGGDGGDGGDGgDGGK......',
+    '.....KDDGGDGGDGGDGGDGGDGGDK.....',
+    '.....KDDGGDGGDGGDGGDGGDGGDK.....',
+    '.....KDDGGDGGDGGDGGDGGDGGDK.....',
+    '....KCCCCCCCCCCCCCCCCCCCCCCK....',
+    '....KCxCCxCCxCCxCCxCCxCCxCCK....',
+    '....KGGGGGGGGGGGGGGGGGGGGGGK....',
+    '...KDGGCCxCCxCCxCCxCCxCCxGGDK...',
+    '...KDGGDDDDDDDDDDDDDDDDDDGGDK...',
+    '..KDGGGKhHHHHHHHHHHHHHHhKGGGDK..',
+    '..KDGGKKhHHHHHHHHHHHHHHhKKGGDK..',
+    '..KDGGKHhHhshHhHHshshHHhHKGGDK..',
+    '.KDGGGKHHHssshsHhsssshHhHHGGGDK.',
+    '.KDGGKKhHhsKKKshssKKKshhHhKGGDK.',
+    '.KDGGKKHhsssssssssssssshHKKGGDK.',
+    '.KDGGKKhKsbssssssssssbsKhKKGGDK.',
+    '.KDGGK.K.KsssssSSsssssK.K.KGGDK.',
+    '..KDGK....KKssssssssKK....KGDK..',
+    '...KK.......KKKKKKKK.......KK...',
+  ],
+  // Left eye squeezed shut behind the camera.
+  wink: [
+    '......KCCK.KKKGGGGKKKKCCKK......',
+    '.....KCCCCKGGGGGGGGGGKCCCCK.....',
+    '.....KCxxCGGGGGGGGGgGGCxxCK.....',
+    '......KKDDDGGDGGDGGDgGDGKK......',
+    '......KDDGDGGDGGDGGDGgDGGK......',
+    '.....KDDGGDGGDGGDGGDGGDGGDK.....',
+    '.....KDDGGDGGDGGDGGDGGDGGDK.....',
+    '.....KDDGGDGGDGGDGGDGGDGGDK.....',
+    '....KCCCCCCCCCCCCCCCCCCCCCCK....',
+    '....KCxCCxCCxCCxCCxCCxCCxCCK....',
+    '....KGGGGGGGGGGGGGGGGGGGGGGK....',
+    '...KDGGCCxCCxCCxCCxCCxCCxGGDK...',
+    '...KDGGDDDDDDDDDDDDDDDDDDGGDK...',
+    '..KDGGGKhHHHHHHHHHHHHHHhKGGGDK..',
+    '..KDGGKKhHHHHHHHHHHHHHHhKKGGDK..',
+    '..KDGGKHhHhshHhHHshshHHhHKGGDK..',
+    '.KDGGGKHHHssshsHhsKKKhHhHHGGGDK.',
+    '.KDGGKKhHhsKKKshssKKKshhHhKGGDK.',
+    '.KDGGKKHhsssssssssLLLsshHKKGGDK.',
+    '.KDGGKKhKsbssssssssssbsKhKKGGDK.',
+    '.KDGGK.K.KsssssSSsssssK.K.KGGDK.',
+    '..KDGK....KKssssssssKK....KGDK..',
+    '...KK.......KKKKKKKK.......KK...',
+  ],
+  // Flaps up and a >_< squint.
+  hurt: [
+    '......KCCK.KKKGGGGKKKKCCKK......',
+    '.....KCCCCKGGGGGGGGGGKCCCCK.....',
+    '.....KCxxCGGGGGGGGGgGGCxxCK.....',
+    '......KKDDDGGDGGDGGDgGDGKK......',
+    '......KDDGDGGDGGDGGDGgDGGK......',
+    '.....KDDGGDGGDGGDGGDGGDGGDK.....',
+    '.....KDDGGDGGDGGDGGDGGDGGDK.....',
+    '.....KDDGGDGGDGGDGGDGGDGGDK.....',
+    '....KCCCCCCCCCCCCCCCCCCCCCCK....',
+    '..KKKCxCCxCCxCCxCCxCCxCCxCCKKK..',
+    '.KGGGGGGGGGGGGGGGGGGGGGGGGGGGGK.',
+    'KGGGGGxCCxCCxCCxCCxCCxCCxCGGGGGK',
+    'GGGDDKDDDDDDDDDDDDDDDDDDDDKDDGGG',
+    'GDDKK.KKhHHHHHHHHHHHHHHhKK.KKDDG',
+    'KKK....KhHHHHHHHHHHHHHHhK....KKK',
+    '......KHhHhshHhHHshshHHhHK......',
+    '......KHHHsKshsHhsssKhHhHHK.....',
+    '......KhHhssKKshssKKsshhHhK.....',
+    '......KHhssKssssssssKsshHK......',
+    '......KhKsbssssssssssbsKhK......',
+    '.......K.KsssssKKsssssK.K.......',
+    '..........KKssssssssKK..........',
+    '............KKKKKKKK............',
+  ],
 };
 
-/** Jacket, backpack and shark-mouth print (rows 19–24). */
-const TORSO = [
-  '....KKKGGGGGCGGGGKK.....', // 19 collar + zip
-  '....KBbKGGGGCGGggK......', // 20 sage shoulder
-  '....KBbKGWRWRWRWGK......', // 21 shark teeth
-  '....KBbKGRpppppRGK......', // 22
-  '....KBbKGWRWRWRWGK......', // 23
-  '....KBBKDGDGCGDGDK......', // 24 ribbed hem
-];
+/** Jacket + arms (frame rows 22-34). */
+const TORSOS = {
+  // Arms at the sides, camera in the facing-side hand.
+  down: [
+    '..........KGGGGCGGGGGK..........', // high funnel collar (frame row 22)
+    '......KKKKKBGGGCGGGGBKKKKK......', // backpack straps
+    '.....KgggDGBGGGCGGGGBGGgggK.....', // sage upper sleeves
+    '.....KDggDGBGGGCGGGGBGGggDK.....',
+    '.....KDggDGBGGGCGGGGBGGggDK.....',
+    '.....KCCCxGBGCCCCCCGBGxCCCK.....', // shark-mouth print
+    '....KCCCCxGBCCCCCCCCBGxCCCCK....',
+    '....KCCCCxGCCRWRWRWCCGxCCCCK....', // big cream sleeves hide the hands
+    '....KCCCCxGCRRRRRRRRCBxCCKK.....',
+    '....KxCxCxGCRRRppRRRCBxCKKKKKK..',
+    '.....KxxxDGCCWRppRWCCGGxKKkYKK..',
+    '......KKKDGCCCCCCCCCCGGKKKKKKK..',
+    '........KDGDGDGDGDGDGDGK........', // ribbed hem (frame row 34)
+  ],
+  // Arms flung out (jump, fall, hurt).
+  up: [
+    '..........KGGGGCGGGGGK..........',
+    '...KK..KKKKBGGGCGGGGBKKKK..KK...',
+    '..KCCKKggDGBGGGCGGGGBGGggKKCCK..',
+    '..KCCCgggDGBGGGCGGGGBGGgggCCCK..',
+    '..KxCCgKKDGBGGGCGGGGBGGKKgCCxK..',
+    '...KxxK.KDGBGCCCCCCGBGGK.KxxK...',
+    '....KK..KDGBCCCCCCCCBGGK..KK....',
+    '........KDGCCRWRWRWCCGGK........',
+    '........KDGCRRRRRRRRCBBK........',
+    '........KDGCRRRppRRRCBkK........',
+    '........KDGCCWRppRWCCGGK........',
+    '........KDGCCCCCCCCCCGGK........',
+    '........KDGDGDGDGDGDGDGK........',
+  ],
+  // Camera lifted to the chest with both hands.
+  chest: [
+    '..........KGGGGCGGGGGK..........',
+    '......KKKKKBGGGCGGGGBKKKKK......',
+    '.....KgggDGBGGGCGGGGBGGgggK.....',
+    '.....KgggDGBGKKKGGGGBGGgggK.....',
+    '.....KgggDGBKKKKKKKKBGGgggK.....',
+    '......KCCCCBKKkYYYKKBCCCCK......',
+    '......KCCCCCKkYLLKYKBCCCCCK.....',
+    '.......KxCCCKKkYYYKKCCCCxK......',
+    '........KDGCKKKKKKKKCBBKK.......',
+    '........KDGCRRRppRRRCBkK........',
+    '........KDGCCWRppRWCCGGK........',
+    '........KDGCCCCCCCCCCGGK........',
+    '........KDGDGDGDGDGDGDGK........',
+  ],
+  // Sleeves bent up toward the face (camera overlay on top).
+  raise: [
+    '......KCCKKGGGGCGGGGGK.KCCK.....',
+    '......KCCCKBGGGCGGGGBKKCCCK.....',
+    '.....KggCCGBGGGCGGGGBGGCCgK.....',
+    '.....KgggDGBGGGCGGGGBGGgggK.....',
+    '.....KgggDGBGGGCGGGGBGGgggK.....',
+    '......KKKDGBGCCCCCCGBGGKKK......',
+    '........KDGBCCCCCCCCBGGK........',
+    '........KDGCCRWRWRWCCGGK........',
+    '........KDGCRRRRRRRRCBBK........',
+    '........KDGCRRRppRRRCBkK........',
+    '........KDGCCWRppRWCCGGK........',
+    '........KDGCCCCCCCCCCGGK........',
+    '........KDGDGDGDGDGDGDGK........',
+  ],
+};
 
-/** Right arm + camera overlays. `y` is the first row. */
-const ARMS = {
-  // Camera held at the hip (idle / walk).
-  hip: {
-    y: 19,
-    rows: [
-      '................KK......',
-      '...............ggKK.....',
-      '................gCCK....',
-      '................KCCKK...',
-      '...............KKKKKKK..',
-      '...............KsKKLWK..',
-      '...............KKKKKKK..',
-    ],
-  },
-  // Camera lifted to the chest — first frame of the photo pose.
-  chest: {
-    y: 18,
-    rows: [
-      '................KK......',
-      '...............gggK.....',
-      '.............KKKKKKKK...',
-      '............sKKKKKLWKK..',
-      '.............KKKKKKKKK..',
-      '..............KsCCK.....',
-      '...............KKK......',
-    ],
-  },
-  // Camera at the eye — the shutter moment.
-  eye: {
-    y: 13,
-    rows: [
-      '..............KKKK......',
-      '.............KKKKKKKK...',
-      '.............KKKKKLWKK..',
-      '............sKKKKKKKKK..',
-      '..............KsKKsK....',
-      '...............KCCK.....',
-      '...............KCCK.....',
-      '..............ggKK......',
-    ],
-  },
-  // Camera raised overhead to keep it safe mid-air.
-  up: {
+/** Overlays drawn on top of the head. `y` is the first frame row. */
+const OVERLAYS = {
+  // Camera at the eye, lens facing out: the shutter moment.
+  cameraEye: {
     y: 14,
     rows: [
-      '..................KKKK..',
-      '.................KKKKKKK',
-      '.................KKKKLWK',
-      '................sKKKKKKK',
-      '................KCCK....',
-      '...............KCCK.....',
-      '...............gCK......',
+      '..................KKK...........',
+      '................KKKKKKKKK.......',
+      '...............KCKkYYYKKCK......',
+      '...............KCKYLKLYKCK......',
+      '...............KCKkYYYKKCK......',
+      '...............KCKKKKKKKCK......',
+      '................KCCK.KCCK.......',
+      '.................KK...KK........',
+    ],
+  },
+  // Camera held up safely while airborne.
+  cameraUp: {
+    y: 19,
+    rows: [
+      '..........................KK....',
+      '.........................KKKKK..',
+      '.........................KKkYK..',
+      '.........................KKKKK..',
     ],
   },
 };
 
-/** Legs (rows 25–31). */
+/** Legs (frame rows 35-41): baggy camo pants and chunky sneakers. */
 const LEGS = {
   stand: [
-    '......KMMMmmMMMMMK......',
-    '......KMMmmMMMMMmMK.....',
-    '......KMMMMMKMmmmmK.....',
-    '......KmMMMMKMmMMmK.....',
-    '......KMMmMMKMmmmmK.....',
-    '.....KCCCCCKKCCCCCCK....',
-    '.....KxxxxxxKxxxxxxxK...',
+    '........KMmMnMMMmMMmMnMK........',
+    '........KMMmMMMMMnMMmMmK........',
+    '........KMnMMmMMMMmMMMMK........',
+    '........KmMMMMnmmMMnMmMK........',
+    '.......KCCCCCCKKKCCCCCCK........',
+    '.......KCCCCCCCKKCCCCCCCK.......',
+    '.......KxxxxxxxKKxxxxxxxK.......',
   ],
-  // Near leg forward, far leg back.
   strideA: [
-    '......KMMMmmMMMMMK......',
-    '.....KMMmmMMMMMmMMK.....',
-    '.....KMMMMKKMMmmmmMK....',
-    '....KmMMMK.KMMmMMmMK....',
-    '....KMMmMK..KMmmmmMMK...',
-    '...KCCCCCK..KKCCCCCCK...',
-    '...KxxxxxK...KxxxxxxxK..',
+    '........KMmMnMMMmMMmMnMK........',
+    '.......KKMMmMMMMMnMMmMmKK.......',
+    '......KMMMnMMmMKKMmMMMMMMK......',
+    '......KMMmMMMMnKKMMnMmMMMK......',
+    '.....KCCCCCCKKK..KKCCCCCCK......',
+    '.....KCCCCCCCK....KCCCCCCCK.....',
+    '.....KxxxxxxxK....KxxxxxxxK.....',
   ],
-  // Legs passing, near foot lifted.
   passA: [
-    '......KMMMmmMMMMMK......',
-    '......KMMmmMMMMMmMK.....',
-    '......KMMMMMKMmmmmK.....',
-    '......KmMMMMKMmMMmK.....',
-    '......KMMmMMKKCCCCCCK...',
-    '.....KCCCCCK.KxxxxxxK...',
-    '.....KxxxxxxK...........',
+    '........KMmMnMMMmMMmMnMK........',
+    '........KMMmMMMMMnMMmMmK........',
+    '........KMnMMmMMMMmMMMMK........',
+    '........KmMMMMnKKCCCCCCK........',
+    '.......KCCCCCCK.KxxxxxxxK.......',
+    '.......KCCCCCCCK.KKKKKKK........',
+    '.......KxxxxxxxK................',
   ],
-  // Far leg forward, near leg back (pocket swaps sides).
   strideB: [
-    '......KMMMmmMMMMMK......',
-    '.....KMMmmMMMMMmMMK.....',
-    '.....KMmmmmKKMMMMMMK....',
-    '....KMmMMmK.KMMmMMMK....',
-    '....KMmmmmK..KMMMmMMK...',
-    '...KCCCCCK..KKCCCCCCK...',
-    '...KxxxxxK...KxxxxxxxK..',
+    '........KMnMmMMMnMMnMmMK........',
+    '.......KKMMnMMMMMmMMnMnKK.......',
+    '......KMMMmMMnMKKMnMMMMMMK......',
+    '......KMMnMMMMmKKMMmMnMMMK......',
+    '.....KCCCCCCKKK..KKCCCCCCK......',
+    '.....KCCCCCCCK....KCCCCCCCK.....',
+    '.....KxxxxxxxK....KxxxxxxxK.....',
   ],
-  // Legs passing, far foot lifted.
   passB: [
-    '......KMMMmmMMMMMK......',
-    '......KMMmmMMMMMmMK.....',
-    '......KMMMMMKMmmmmK.....',
-    '......KmMMMMKMmMMmK.....',
-    '.....KCCCCCKKMmmmmK.....',
-    '.....KxxxxxK.KCCCCCCK...',
-    '.............KxxxxxxxK..',
+    '........KMmMnMMMmMMmMnMK........',
+    '........KMMmMMMMMnMMmMmK........',
+    '........KMnMMmMMMMmMMMMK........',
+    '.......KCCCCCCnKKMMnMmMK........',
+    '.......KxxxxxxxKKCCCCCCK........',
+    '........KKKKKKK.KCCCCCCCK.......',
+    '................KxxxxxxxK.......',
   ],
-  // Knees tucked for the jump.
   tuck: [
-    '......KMMMmmMMMMMK......',
-    '.....KMMmmMMMMMmMMK.....',
-    '....KMMMMMKKMMmmmmMK....',
-    '....KCCCCCK.KCCCCCCK....',
-    '....KxxxxxK.KxxxxxxK....',
-    '........................',
-    '........................',
+    '........KMmMnMMMmMMmMnMK........',
+    '........KMMmMMMMMnMMmMmK........',
+    '.......KCCCCCCKKKKCCCCCCK.......',
+    '.......KxxxxxxxK.KxxxxxxxK......',
+    '........KKKKKKK...KKKKKKK.......',
+    '................................',
+    '................................',
   ],
-  // Legs dangling while falling.
   dangle: [
-    '......KMMMmmMMMMMK......',
-    '.....KMMmmMMMMMmMMK.....',
-    '.....KMMMMKKMMmmmmK.....',
-    '.....KmMMMK.KMmMMmK.....',
-    '....KCCCCCK..KCCCCCK....',
-    '....KxxxxxK..KxxxxxK....',
-    '........................',
+    '........KMmMnMMMmMMmMnMK........',
+    '........KMMmMMMMMnMMmMmK........',
+    '........KMnMMmMMMMmMMMMK........',
+    '........KmMMMMnKKMMnMmMK........',
+    '........KCCCCCK..KCCCCCK........',
+    '........KxxxxxK..KxxxxxK........',
+    '.........KKKKK....KKKKK.........',
   ],
 };
 
 /**
- * Frame recipes. `bob` shifts head + arm down (positive) or up (negative)
- * by whole pixels, which gives the idle breathing and walking bounce.
+ * Frame recipes. `bob` shifts the head (and any overlay) down (positive) or
+ * up (negative) by whole pixels: idle breathing and the walking bounce.
  */
 const RECIPES = {
   idle: [
-    { head: 'down', face: 'normal', arm: 'hip', legs: 'stand', bob: 0 },
-    { head: 'down', face: 'normal', arm: 'hip', legs: 'stand', bob: 1 },
+    { head: 'down', torso: 'down', legs: 'stand', bob: 0 },
+    { head: 'down', torso: 'down', legs: 'stand', bob: 1 },
   ],
   walk: [
-    { head: 'down', face: 'normal', arm: 'hip', legs: 'strideA', bob: 0 },
-    { head: 'down', face: 'normal', arm: 'hip', legs: 'passA', bob: -1 },
-    { head: 'down', face: 'normal', arm: 'hip', legs: 'strideB', bob: 0 },
-    { head: 'down', face: 'normal', arm: 'hip', legs: 'passB', bob: -1 },
+    { head: 'down', torso: 'down', legs: 'strideA', bob: 0 },
+    { head: 'down', torso: 'down', legs: 'passA', bob: -1 },
+    { head: 'down', torso: 'down', legs: 'strideB', bob: 0 },
+    { head: 'down', torso: 'down', legs: 'passB', bob: -1 },
   ],
-  jump: [{ head: 'down', face: 'normal', arm: 'up', legs: 'tuck', bob: 0 }],
-  fall: [{ head: 'up', face: 'normal', arm: 'up', legs: 'dangle', bob: 0 }],
+  jump: [{ head: 'down', torso: 'up', legs: 'tuck', overlay: 'cameraUp', bob: 0 }],
+  fall: [{ head: 'up', torso: 'up', legs: 'dangle', overlay: 'cameraUp', bob: 0 }],
   photo: [
-    { head: 'down', face: 'normal', arm: 'chest', legs: 'stand', bob: 0 },
-    { head: 'down', face: 'wink', arm: 'eye', legs: 'stand', bob: 0 },
+    { head: 'down', torso: 'chest', legs: 'stand', bob: 0 },
+    { head: 'wink', torso: 'raise', legs: 'stand', overlay: 'cameraEye', bob: 0 },
   ],
-  hurt: [{ head: 'up', face: 'hurt', arm: 'up', legs: 'dangle', bob: 0 }],
-  blink: [{ head: 'down', face: 'blink', arm: 'hip', legs: 'stand', bob: 0 }],
+  hurt: [{ head: 'hurt', torso: 'up', legs: 'dangle', bob: 0 }],
+  blink: [{ head: 'blink', torso: 'down', legs: 'stand', bob: 0 }],
 };
 
 /** Animation timing for the procedural atlas (rows follow RECIPES order). */
@@ -260,25 +379,14 @@ const PROCEDURAL_ANIMS = {
   blink: { fps: 1 },
 };
 
-/** Swap the eye rows of a head for another expression. */
-function withFace(head, faceName) {
-  const face = FACES[faceName];
-  if (!face) return head;
-  const rows = head.slice();
-  rows[14] = rows[14].slice(0, 6) + face[0] + rows[14].slice(18);
-  rows[15] = rows[15].slice(0, 6) + face[1] + rows[15].slice(18);
-  return rows;
-}
-
 /** Paint one frame recipe into `ctx` at the frame's top-left corner. */
 function paintFrame(ctx, recipe, ox, oy) {
-  const head = withFace(recipe.head === 'up' ? HEAD_UP : HEAD_DOWN, recipe.face);
-  const arm = ARMS[recipe.arm];
-  // Draw order: legs → torso → head → arm, so the camera sits on top.
-  paintGrid(ctx, LEGS[recipe.legs], ZENYU_COLORS, ox, oy + 25);
-  paintGrid(ctx, TORSO, ZENYU_COLORS, ox, oy + 19);
-  paintGrid(ctx, head, ZENYU_COLORS, ox, oy + recipe.bob);
-  paintGrid(ctx, arm.rows, ZENYU_COLORS, ox, oy + arm.y + recipe.bob);
+  // Draw order: legs → torso → head → overlay, so the camera sits on top.
+  paintGrid(ctx, LEGS[recipe.legs], ZENYU_COLORS, ox, oy + 35);
+  paintGrid(ctx, TORSOS[recipe.torso], ZENYU_COLORS, ox, oy + 22);
+  paintGrid(ctx, HEADS[recipe.head], ZENYU_COLORS, ox, oy + recipe.bob);
+  const overlay = OVERLAYS[recipe.overlay];
+  if (overlay) paintGrid(ctx, overlay.rows, ZENYU_COLORS, ox, oy + overlay.y + recipe.bob);
 }
 
 /** Build the procedural atlas: one row per animation, frames left→right. */

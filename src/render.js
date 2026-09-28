@@ -17,7 +17,7 @@ function lerp(a, b, t) {
 /** A soft vertical light beam used to mark photo spots. */
 function buildBeam() {
   const w = 9;
-  const h = 48;
+  const h = 56;
   const canvas = makeCanvas(w, h);
   const ctx = pixelContext(canvas);
   for (let y = 0; y < h; y++) {
@@ -87,12 +87,12 @@ export function createRenderer(sprites) {
     for (let i = 0; i < 3; i++) {
       const t = (time * 0.6 + i / 3 + spot.id * 0.17) % 1;
       ctx.globalAlpha = 1 - t;
-      ctx.fillRect(x - 3 + ((i * 3 + spot.id) % 7), Math.round(y - 4 - t * 34), 1, 1);
+      ctx.fillRect(x - 3 + ((i * 3 + spot.id) % 7), Math.round(y - 4 - t * 44), 1, 1);
     }
     ctx.globalAlpha = 1;
     // Floating viewfinder icon (merged into the "E" prompt while Zenyu is here)
     if (spot === activeSpotShown) return;
-    const iy = Math.round(y - 44 + Math.sin(time * 2.2 + spot.id) * 1.5);
+    const iy = Math.round(y - 56 + Math.sin(time * 2.2 + spot.id) * 1.5);
     brackets(ctx, x - 5, iy + 1, 11, 9, 3, 'rgba(24,16,34,0.6)');
     brackets(ctx, x - 6, iy, 11, 9, 3, ENV.spotGlow);
     ctx.fillStyle = Math.floor(time * 2) % 2 ? '#FF6B6B' : ENV.spotGlow;
@@ -111,7 +111,7 @@ export function createRenderer(sprites) {
     if (!promptSpot(run)) return;
     const pos = playerScreenPos(run.player, alpha);
     const x = pos.x - camX;
-    const y = Math.round(pos.y - 42 + Math.sin(run.time * 5) * 1.2);
+    const y = Math.round(pos.y - 56 + Math.sin(run.time * 5) * 1.2);
     const label = run.touch ? '📷' : 'E';
     const w = run.touch ? 11 : 9;
     const bw = w + 7;
