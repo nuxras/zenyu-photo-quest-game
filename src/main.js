@@ -25,6 +25,8 @@ export function init(container, options = {}) {
   const { ctx } = display;
   const input = createInput(display.root, display.toGame);
   const game = { time: 0, sprites: null, renderer: null, run: null };
+  const motionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  const reducedMotion = () => Boolean(motionQuery?.matches);
 
   // --- State machine --------------------------------------------------------
   const states = {
@@ -62,7 +64,7 @@ export function init(container, options = {}) {
     },
     PLAYING: {
       enter() {
-        game.run = createRun();
+        game.run = createRun({ reducedMotion: reducedMotion() });
       },
       update(dt) {
         game.run.update(dt, input);

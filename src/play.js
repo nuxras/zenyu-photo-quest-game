@@ -8,7 +8,10 @@ import { createLevel } from './level.js';
 import { Player } from './player.js';
 import { Camera } from './camera.js';
 
-export function createRun() {
+/**
+ * @param {object} env  { reducedMotion: boolean, isTouch: () => boolean }
+ */
+export function createRun(env = {}) {
   const level = createLevel();
   const player = new Player(level.start.x, level.start.y);
   const camera = new Camera(level.width);
@@ -19,9 +22,12 @@ export function createRun() {
     player,
     camera,
     time: 0,
+    reducedMotion: Boolean(env.reducedMotion),
+    touch: false,
 
     update(dt, input) {
       run.time += dt;
+      run.touch = input.isTouch();
       player.update(dt, input, level.solids, level.width);
       if (player.feetY > PLAYER.fallDeathY) {
         player.respawnAfterFall();

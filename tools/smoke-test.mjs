@@ -93,6 +93,25 @@ await step('jumps and lands again', async () => {
   if (!after.grounded) throw new Error('did not land');
 });
 
+await step('camera follows across the city', async () => {
+  for (const [i, x] of [[4, 1180], [5, 2330], [6, 3700]]) {
+    await page.evaluate((x) => {
+      const { run } = window.__zenyu.game;
+      run.player.reset(x, 40, run.player.hearts);
+      run.camera.snapTo(run.player);
+    }, x);
+    await page.waitForTimeout(700);
+    const state = await page.evaluate(() => ({
+      cam: window.__zenyu.game.run.camera.x,
+      px: window.__zenyu.game.run.player.x,
+    }));
+    if (Math.abs(state.cam + 160 - state.px) > 90 && state.cam > 0 && state.cam < 3580) {
+      throw new Error(`camera ${state.cam} too far from player ${state.px}`);
+    }
+    await shot(`0${i}-city-${x}`);
+  }
+});
+
 await browser.close();
 
 console.log(infos.filter((t) => t.startsWith('[Zenyu]')).join('\n'));
